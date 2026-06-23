@@ -381,12 +381,30 @@ function cb(c){const m={'Hard':'c-hard','Soft':'c-soft','None':'c-none','Interna
 function mb(m){const cl={PMS:'m-pms',FIN:'m-fin',INT:'m-int',GEN:'m-gen',MMS:'m-mms',POS:'m-pos',ADD:'m-add'};return`<span class="${cl[m]||'m-gen'}">${m}</span>`}
 
 function filtered(){
+
   const q=(document.getElementById('srch')||{}).value||'';
+
   return DATA.filter(d=>{
-    if(pfilt!=='all'&&d.priority!==pfilt)return false;
-    if(q&&!JSON.stringify(d).toLowerCase().includes(q.toLowerCase()))return false;
+
+    if(pfilt!=='all' && d.priority!==pfilt)
+      return false;
+
+    if(custFilt!=='all' && d.customer!==custFilt)
+      return false;
+
+    if(modFilt!=='all' && d.module!==modFilt)
+      return false;
+
+    if(q && !JSON.stringify(d).toLowerCase().includes(q.toLowerCase()))
+      return false;
+
     return true;
-  }).sort((a,b)=>(PO[a.priority]||9)-(PO[b.priority]||9)||(SO[a.status]||9)-(SO[b.status]||9));
+
+  }).sort((a,b)=>
+    (PO[a.priority]||9)-(PO[b.priority]||9) ||
+    (SO[a.status]||9)-(SO[b.status]||9)
+  );
+
 }
 
 // ══ NAV ═══════════════════════════════════════════════════════════════
