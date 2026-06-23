@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InnKey PM — Requirements Manager</title>
+<style>
+:root{--bg:#f7f6f3;--surface:#fff;--border:#e2ddd6;--text:#1a1814;--text2:#6b6560;--text3:#9e9890;--accent:#2d5be3;--accent-bg:#eef2fd;--accent-text:#1a3aad;--success:#1a7a4a;--success-bg:#eaf5ef;--warn:#a05c00;--warn-bg:#fef3e2;--danger:#c0321f;--danger-bg:#fdecea;--teal:#0f6e56;--teal-bg:#e4f5f0;--r:8px;--rl:12px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+
+/* ── LOCK SCREEN ── */
+#lock-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:24px}
+#lock-screen.hidden{display:none}
+.lock-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:40px 48px;text-align:center;max-width:360px;width:100%}
+.lock-logo{font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px}
+.lock-sub{font-size:13px;color:var(--text3);margin-bottom:28px}
+.lock-dots{display:flex;justify-content:center;gap:12px;margin-bottom:24px}
+.lock-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);background:var(--surface);transition:background .15s}
+.lock-dot.filled{background:var(--accent);border-color:var(--accent)}
+.pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:240px;margin:0 auto 16px}
+.pin-btn{padding:16px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);font-size:18px;font-weight:500;cursor:pointer;color:var(--text);transition:background .1s}
+.pin-btn:hover{background:var(--accent-bg);border-color:var(--accent)}
+.pin-btn:active{background:var(--accent);color:#fff}
+.pin-clear{padding:12px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);font-size:12px;cursor:pointer;color:var(--text2);margin-top:4px;width:100%;max-width:240px;display:block;margin-left:auto;margin-right:auto}
+.pin-error{color:var(--danger);font-size:12px;min-height:18px}
+.pin-hint{font-size:11px;color:var(--text3);margin-top:12px}
+.pin-setup-btn{margin-top:8px;padding:8px 16px;border:1px solid var(--accent);border-radius:var(--r);background:var(--accent-bg);color:var(--accent-text);font-size:12px;cursor:pointer}
+
+/* ── APP SHELL ── */
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:220px;min-width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.content{flex:1;overflow-y:auto;padding:20px}
+
+/* ── SIDEBAR ── */
+.logo{padding:16px 16px 12px;border-bottom:1px solid var(--border)}
+.logo-t{font-size:15px;font-weight:700;color:var(--text)}
+.logo-s{font-size:11px;color:var(--text3);margin-top:1px}
+.nav{padding:10px 8px;flex:1}
+.ni{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--r);cursor:pointer;font-size:13px;color:var(--text2);margin-bottom:2px}
+.ni:hover{background:var(--bg);color:var(--text)}
+.ni.on{background:var(--accent-bg);color:var(--accent-text);font-weight:500}
+.ni-icon{font-size:16px;width:20px;text-align:center}
+.ns{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;padding:10px 8px 4px}
+.stat-box{padding:12px 16px;border-top:1px solid var(--border)}
+.sr{display:flex;justify-content:space-between;font-size:11px;color:var(--text2);padding:2px 0}
+.lock-btn-small{width:100%;margin-top:10px;padding:7px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);font-size:11px;cursor:pointer;color:var(--text2);text-align:center}
+.lock-btn-small:hover{background:var(--bg)}
+
+/* ── TOPBAR ── */
+.search-wrap{flex:1;position:relative}
+.search-wrap input{width:100%;padding:7px 12px 7px 32px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--bg);color:var(--text);outline:none}
+.search-wrap input:focus{border-color:var(--accent);background:var(--surface)}
+.si{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:3px 10px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;background:var(--surface);color:var(--text2)}
+.chip.on{background:var(--accent-bg);color:var(--accent-text);border-color:#c0cffa}
+.btn{padding:7px 14px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-weight:500;white-space:nowrap}
+.btn:hover{background:var(--bg)}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover{background:#2450c8}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-danger{color:var(--danger)}
+
+/* ── VIEWS ── */
+.sec{display:none}.sec.on{display:block}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:14px 16px}
+.metric-label{font-size:11px;color:var(--text2);margin-bottom:4px}
+.metric-val{font-size:26px;font-weight:700;color:var(--text);line-height:1}
+.metric-sub{font-size:11px;color:var(--text3);margin-top:3px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:16px}
+.ch{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.ct{font-size:13px;font-weight:600;color:var(--text)}
+.cc{font-size:11px;color:var(--text3)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{padding:9px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);background:var(--bg);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{color:var(--text)}
+td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafaf8}
+.td-desc{max-width:280px;line-height:1.4}
+
+/* ── BADGES ── */
+.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;white-space:nowrap}
+.p1{background:#fdecea;color:#c0321f}.p2{background:#fef3e2;color:#a05c00}.p3{background:var(--accent-bg);color:var(--accent-text)}.p4{background:#f0ecfd;color:#5b3eb5}.p5{background:var(--bg);color:var(--text2)}
+.s-rel{background:var(--success-bg);color:var(--success)}.s-dev{background:#fef3e2;color:#a05c00}.s-tkt{background:var(--accent-bg);color:var(--accent-text)}.s-def{background:#f0ecfd;color:#5b3eb5}.s-no{background:var(--bg);color:var(--text3)}
+.c-hard{background:#fdecea;color:#c0321f}.c-soft{background:var(--accent-bg);color:var(--accent-text)}.c-none{background:var(--bg);color:var(--text3)}.c-int{background:var(--teal-bg);color:var(--teal)}
+.m-pms{background:var(--accent-bg);color:var(--accent-text);font-size:10px;padding:1px 5px;border-radius:3px;font-weight:600}
+.m-fin{background:var(--teal-bg);color:var(--teal);font-size:10px;padding:1px 5px;border-radius:3px;font-weight:600}
+.m-int{background:#fef3e2;color:#a05c00;font-size:10px;padding:1px 5px;border-radius:3px;font-weight:600}
+.m-gen{background:var(--bg);color:var(--text2);font-size:10px;padding:1px 5px;border-radius:3px;font-weight:600}
+.m-mms{background:#f0ecfd;color:#5b3eb5;font-size:10px;padding:1px 5px;border-radius:3px;font-weight:600}
+.m-pos{background:#fdecea;color:#c0321f;font-size:10px;padding:1px 5px;border-radius:3px;font-weight:600}
+.m-add{background:var(--success-bg);color:var(--success);font-size:10px;padding:1px 5px;border-radius:3px;font-weight:600}
+
+/* ── KANBAN ── */
+.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kcol{background:var(--bg);border-radius:var(--rl);padding:12px}
+.kh{font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.kn{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1px 7px;font-size:10px;color:var(--text2)}
+.kcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:8px;cursor:pointer}
+.kcard:hover{border-color:var(--accent)}
+.kt{font-size:11px;color:var(--text);line-height:1.4;margin-bottom:6px}
+.km{font-size:10px;color:var(--text3);display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+
+/* ── FLAGS ── */
+.flag{display:flex;gap:8px;padding:10px 14px;border-radius:var(--r);margin-bottom:8px}
+.f-red{background:var(--danger-bg);border-left:3px solid var(--danger)}
+.f-amb{background:var(--warn-bg);border-left:3px solid #e8930a}
+.f-blu{background:var(--accent-bg);border-left:3px solid var(--accent)}
+.fd{width:6px;height:6px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.f-red .fd{background:var(--danger)}.f-amb .fd{background:#e8930a}.f-blu .fd{background:var(--accent)}
+.ft{font-size:12px;color:var(--text);line-height:1.6}
+.ft strong{font-weight:600}
+.slabel{font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin:16px 0 8px}
+
+/* ── MODAL ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:100;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto}
+.overlay.show{display:flex}
+.modal{background:var(--surface);border-radius:var(--rl);width:600px;max-width:100%;border:1px solid var(--border)}
+.mh{padding:16px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.mt{font-size:15px;font-weight:600}
+.mb{padding:18px 20px}
+.mf{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.fg{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.fg label{font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em}
+.fg input,.fg select,.fg textarea{padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;color:var(--text);background:var(--surface);outline:none;font-family:inherit;width:100%}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--accent)}
+.fg textarea{min-height:72px;resize:vertical}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.full{grid-column:1/-1}
+
+/* ── AI PANEL ── */
+.ai-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px;margin-bottom:16px}
+.ai-hd{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.ai-dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.ai-ht{font-size:13px;font-weight:600}
+.ai-row{display:flex;gap:8px}
+.ai-row textarea{flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;color:var(--text);background:var(--bg);outline:none;font-family:inherit;resize:none;min-height:42px}
+.ai-row textarea:focus{border-color:var(--accent);background:var(--surface)}
+.ai-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.ai-chip{padding:4px 10px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;background:var(--surface);color:var(--text2)}
+.ai-chip:hover{background:var(--accent-bg);color:var(--accent-text);border-color:#c0cffa}
+.ai-msgs{margin-top:14px;display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto}
+.msg-u{align-self:flex-end;background:var(--accent);color:#fff;padding:9px 13px;border-radius:14px 14px 3px 14px;font-size:12px;max-width:80%;line-height:1.5}
+.msg-a{align-self:flex-start;background:var(--bg);border:1px solid var(--border);padding:9px 13px;border-radius:3px 14px 14px 14px;font-size:12px;max-width:90%;line-height:1.7;white-space:pre-wrap}
+.typing-ind{align-self:flex-start;background:var(--bg);border:1px solid var(--border);padding:12px 16px;border-radius:3px 14px 14px 14px;display:flex;gap:4px}
+.typing-ind span{width:6px;height:6px;border-radius:50%;background:var(--text3);animation:pulse 1.2s infinite}
+.typing-ind span:nth-child(2){animation-delay:.2s}.typing-ind span:nth-child(3){animation-delay:.4s}
+@keyframes pulse{0%,80%,100%{opacity:.2}40%{opacity:1}}
+.ai-key-row{display:flex;gap:8px;margin-top:10px;padding:10px;background:var(--bg);border-radius:var(--r);align-items:center}
+.ai-key-row input{flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;color:var(--text);background:var(--surface);outline:none;font-family:monospace}
+.ai-key-row input:focus{border-color:var(--accent)}
+.ai-key-label{font-size:11px;color:var(--text2);white-space:nowrap}
+
+/* ── EXPORT / IMPORT ── */
+.toolbar-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.saved-badge{font-size:11px;color:var(--success);padding:4px 8px;background:var(--success-bg);border-radius:var(--r)}
+
+/* ── SETTINGS ── */
+.settings-section{margin-bottom:24px}
+.settings-title{font-size:13px;font-weight:600;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.setting-label{font-size:13px;color:var(--text)}
+.setting-sub{font-size:11px;color:var(--text3);margin-top:2px}
+</style>
+</head>
+<body>
+
+<!-- ══ LOCK SCREEN ══════════════════════════════════════════════════ -->
+<div id="lock-screen">
+  <div class="lock-card">
+    <div class="lock-logo">InnKey PM</div>
+    <div class="lock-sub">Requirements Manager · Enter PIN to continue</div>
+    <div class="lock-dots" id="lock-dots">
+      <div class="lock-dot" id="d0"></div>
+      <div class="lock-dot" id="d1"></div>
+      <div class="lock-dot" id="d2"></div>
+      <div class="lock-dot" id="d3"></div>
+    </div>
+    <div class="pin-grid">
+      <button class="pin-btn" onclick="pinPress('1')">1</button>
+      <button class="pin-btn" onclick="pinPress('2')">2</button>
+      <button class="pin-btn" onclick="pinPress('3')">3</button>
+      <button class="pin-btn" onclick="pinPress('4')">4</button>
+      <button class="pin-btn" onclick="pinPress('5')">5</button>
+      <button class="pin-btn" onclick="pinPress('6')">6</button>
+      <button class="pin-btn" onclick="pinPress('7')">7</button>
+      <button class="pin-btn" onclick="pinPress('8')">8</button>
+      <button class="pin-btn" onclick="pinPress('9')">9</button>
+      <button class="pin-btn" onclick="pinPress('0')" style="grid-column:2">0</button>
+    </div>
+    <button class="pin-clear" onclick="pinClear()">⌫ Clear</button>
+    <div class="pin-error" id="pin-error"></div>
+    <div class="pin-hint" id="pin-hint">Default PIN: <strong>1234</strong> · Change in Settings after login</div>
+  </div>
+</div>
+
+<!-- ══ APP ══════════════════════════════════════════════════════════ -->
+<div class="app" id="app" style="display:none">
+  <div class="sidebar">
+    <div class="logo">
+      <div class="logo-t">InnKey PM</div>
+      <div class="logo-s">Requirements Manager</div>
+    </div>
+    <div class="nav">
+      <div class="ns">Views</div>
+      <div class="ni on" onclick="nav('dash',this)"><span class="ni-icon">▦</span>Dashboard</div>
+      <div class="ni" onclick="nav('list',this)"><span class="ni-icon">☰</span>All requirements</div>
+      <div class="ni" onclick="nav('kanban',this)"><span class="ni-icon">⊞</span>Kanban board</div>
+      <div class="ni" onclick="nav('risks',this)"><span class="ni-icon">⚑</span>Risk flags</div>
+      <div class="ns">Tools</div>
+      <div class="ni" onclick="nav('ai',this)"><span class="ni-icon">✦</span>AI assistant</div>
+      <div class="ni" onclick="nav('settings',this)"><span class="ni-icon">⚙</span>Settings</div>
+    </div>
+    <div class="stat-box">
+      <div class="sr"><span>Total</span><span id="st-tot">—</span></div>
+      <div class="sr"><span style="color:var(--danger)">Hard commits</span><span id="st-hard">—</span></div>
+      <div class="sr"><span style="color:var(--warn)">No Jira</span><span id="st-jira">—</span></div>
+      <div class="sr"><span style="color:var(--success)">Released</span><span id="st-rel">—</span></div>
+      <button class="lock-btn-small" onclick="lockApp()">🔒 Lock</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="search-wrap">
+        <span class="si">🔍</span>
+        <input type="text" id="srch" placeholder="Search requirements, customers, Jira tickets..." oninput="renderAll()">
+      </div>
+      <div class="chips">
+        <div class="chip on" onclick="pf('all',this)">All</div>
+        <div class="chip" onclick="pf('P1',this)">P1</div>
+        <div class="chip" onclick="pf('P2',this)">P2</div>
+        <div class="chip" onclick="pf('P3',this)">P3</div>
+        <div class="chip" onclick="pf('P4',this)">P4</div>
+        <div class="chip" onclick="pf('P5',this)">P5</div>
+      </div>
+      <span class="saved-badge" id="save-badge" style="display:none">✓ Saved</span>
+      <button class="btn btn-primary" onclick="openAdd()">+ Add</button>
+    </div>
+    <div class="content">
+      <div id="v-dash" class="sec on"></div>
+      <div id="v-list" class="sec"></div>
+      <div id="v-kanban" class="sec"></div>
+      <div id="v-risks" class="sec"></div>
+      <div id="v-ai" class="sec"></div>
+      <div id="v-settings" class="sec"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL ════════════════════════════════════════════════════════ -->
+<div class="overlay" id="modal">
+  <div class="modal">
+    <div class="mh"><div class="mt" id="modal-title">Add requirement</div><button class="btn btn-sm" onclick="closeModal()">✕</button></div>
+    <div class="mb">
+      <div class="fg full"><label>Description *</label><textarea id="f-desc" placeholder="Describe the requirement clearly..."></textarea></div>
+      <div class="fg2">
+        <div class="fg"><label>Customer *</label><input type="text" id="f-cust" placeholder="e.g. Accord, Fern, Marriott"></div>
+        <div class="fg"><label>Module</label>
+          <select id="f-mod"><option>PMS</option><option>FIN</option><option>POS</option><option>MMS</option><option>INT</option><option>GEN</option><option>BQT</option><option>ADD</option></select>
+        </div>
+        <div class="fg"><label>Priority</label>
+          <select id="f-pri"><option>P1</option><option>P2</option><option selected>P3</option><option>P4</option><option>P5</option></select>
+        </div>
+        <div class="fg"><label>Commitment</label>
+          <select id="f-com"><option>None</option><option>Soft</option><option>Hard</option><option>Internal</option></select>
+        </div>
+        <div class="fg"><label>Status</label>
+          <select id="f-sta"><option>Not Planned</option><option>To Define</option><option>Ticket Created</option><option>In Development</option><option>Released</option></select>
+        </div>
+        <div class="fg"><label>Planned</label>
+          <select id="f-pln"><option>Not Planned</option><option>Current Sprint</option><option>Current Quarter</option><option>Next Quarter</option></select>
+        </div>
+        <div class="fg"><label>Jira ticket</label><input type="text" id="f-jira" placeholder="IDK-XXXXX"></div>
+        <div class="fg"><label>Impact</label>
+          <select id="f-imp"><option>High</option><option selected>Medium</option><option>Low</option></select>
+        </div>
+        <div class="fg"><label>Fix version</label><input type="text" id="f-ver" placeholder="e.g. 7.4.10"></div>
+        <div class="fg"><label>Zendesk #</label><input type="text" id="f-zen" placeholder="Ticket number"></div>
+        <div class="fg full"><label>Remarks / dependencies</label><textarea id="f-rem" placeholder="Any context, dependencies, customer notes..." style="min-height:60px"></textarea></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveItem()">Save requirement</button></div>
+  </div>
+</div>
+
+<script>
+// ══ DEFAULT DATA ═════════════════════════════════════════════════════
+const DEFAULT_DATA=[
+  {id:1,sr:26,customer:"Accord",module:"PMS",priority:"P1",commitment:"Soft",description:"Maximum amount limit in Paymode Master",jira:"IDK-24912",status:"Released",planned:"Current Sprint",impact:"High",ver:"7.4.9",zen:"74118",remarks:""},
+  {id:2,sr:20,customer:"Accord",module:"POS",priority:"P2",commitment:"Soft",description:"Track weekday/weekend revenue in reports — outlet, item group and item wise",jira:"",status:"To Define",planned:"Current Quarter",impact:"Medium",ver:"",zen:"",remarks:""},
+  {id:3,sr:46,customer:"Fern",module:"FIN",priority:"P1",commitment:"Hard",description:"Bulk Update (Lock/Unlock) transactions for a month in Finance Transaction Lock",jira:"IDK-24910",status:"Released",planned:"Current Sprint",impact:"Medium",ver:"7.4.9",zen:"78306",remarks:""},
+  {id:4,sr:295,customer:"Fern",module:"INT",priority:"P2",commitment:"Hard",description:"SAML SSO Integration with Azure AD — Oct-26 hard deadline",jira:"",status:"Not Planned",planned:"Next Quarter",impact:"High",ver:"",zen:"",remarks:"Hard deadline 9 months from Dec-2025. Redirect login to Azure AD."},
+  {id:5,sr:32,customer:"Fern",module:"ADD",priority:"P2",commitment:"Soft",description:"Accounts Receivable Module — Chain Level",jira:"",status:"Not Planned",planned:"Next Quarter",impact:"High",ver:"",zen:"58002",remarks:"Also requested by Pride"},
+  {id:6,sr:251,customer:"Fern",module:"INT",priority:"P1",commitment:"Hard",description:"Cancel API / Force Cancel API — Pine Labs CC Terminal Interface",jira:"IDK-21508",status:"In Development",planned:"Current Sprint",impact:"Medium",ver:"7.4.10",zen:"",remarks:""},
+  {id:7,sr:263,customer:"Independent",module:"FIN",priority:"P1",commitment:"Hard",description:"Voucher Import with cost center allocation",jira:"IDK-25387",status:"Ticket Created",planned:"Current Sprint",impact:"High",ver:"7.4.10",zen:"",remarks:"Sangam Hotels"},
+  {id:8,sr:264,customer:"Independent",module:"INT",priority:"P1",commitment:"Hard",description:"New Door Lock Interface — Doyen",jira:"IDK-25388",status:"Ticket Created",planned:"Current Sprint",impact:"High",ver:"7.4.10",zen:"",remarks:"Sangam Hotels"},
+  {id:9,sr:267,customer:"Independent",module:"MMS",priority:"P3",commitment:"Soft",description:"Bulk ordering across departments for DPR and MR",jira:"",status:"Not Planned",planned:"Next Quarter",impact:"Medium",ver:"",zen:"",remarks:""},
+  {id:10,sr:266,customer:"Independent",module:"PMS",priority:"P3",commitment:"None",description:"Add filters to Cancellation Report — Market Segment, Business Source",jira:"",status:"Not Planned",planned:"Next Quarter",impact:"Medium",ver:"",zen:"",remarks:"Sangam"},
+  {id:11,sr:269,customer:"Independent",module:"PMS",priority:"P3",commitment:"None",description:"Drill-down in Productivity and BOB reports to individual reservations",jira:"",status:"Not Planned",planned:"Next Quarter",impact:"Medium",ver:"",zen:"",remarks:""},
+  {id:12,sr:279,customer:"Marriott",module:"GEN",priority:"P1",commitment:"Hard",description:"SOC-2 Certification — Dec-26 deadline",jira:"",status:"Ticket Created",planned:"Current Sprint",impact:"High",ver:"",zen:"",remarks:""},
+  {id:13,sr:282,customer:"Marriott",module:"PMS",priority:"P2",commitment:"Soft",description:"Block and Party feature with merged reservation tables",jira:"",status:"To Define",planned:"Next Quarter",impact:"High",ver:"",zen:"",remarks:"Must have for larger Marriott hotels. Sequence first."},
+  {id:14,sr:283,customer:"Marriott",module:"PMS",priority:"P3",commitment:"Soft",description:"Sharer and pax reservation operations",jira:"",status:"To Define",planned:"Next Quarter",impact:"High",ver:"",zen:"",remarks:"Depends on Block & Party (Sr 282)"},
+  {id:15,sr:285,customer:"Marriott",module:"PMS",priority:"P2",commitment:"Soft",description:"Charge and Window Routing",jira:"",status:"To Define",planned:"Next Quarter",impact:"High",ver:"",zen:"",remarks:"Must have for larger Marriott hotels"},
+  {id:16,sr:270,customer:"Marriott",module:"PMS",priority:"P2",commitment:"Hard",description:"Reservation list report across reservations and check-ins",jira:"IDK-25638",status:"Ticket Created",planned:"Current Sprint",impact:"High",ver:"7.4.10",zen:"",remarks:""},
+  {id:17,sr:254,customer:"Pride",module:"FIN",priority:"P1",commitment:"Hard",description:"Payment Request/Approval Flow",jira:"IDK-25248",status:"Ticket Created",planned:"Current Sprint",impact:"High",ver:"7.4.11",zen:"",remarks:""},
+  {id:18,sr:194,customer:"Pride",module:"FIN",priority:"P1",commitment:"Soft",description:"Consolidated Trial Balance, P&L and Balance Sheet at Account level",jira:"IDK-22545",status:"Released",planned:"Current Sprint",impact:"Medium",ver:"7.4.9",zen:"",remarks:""},
+  {id:19,sr:198,customer:"Pride",module:"FIN",priority:"P2",commitment:"Soft",description:"MTD, YTD and actual budget in Trial Balance",jira:"",status:"To Define",planned:"Current Quarter",impact:"Medium",ver:"",zen:"61677",remarks:""},
+  {id:20,sr:220,customer:"Raintree",module:"PMS",priority:"P1",commitment:"Hard",description:"Number of Visits in In-house guest night audit report",jira:"IDK-24734",status:"Released",planned:"Current Sprint",impact:"Medium",ver:"7.4.9",zen:"",remarks:""},
+  {id:21,sr:297,customer:"Treat",module:"INT",priority:"P2",commitment:"Hard",description:"Stayflexi CM Interface",jira:"IDK-25698",status:"Ticket Created",planned:"Current Sprint",impact:"High",ver:"7.4.10",zen:"",remarks:"Commitment against integration charges. Moving from Staah."},
+  {id:22,sr:141,customer:"InnKey",module:"PMS",priority:"P3",commitment:"Internal",description:"Show Credit Limit in Reservation/Folio — alert when booking exceeds credit limit",jira:"",status:"To Define",planned:"Current Quarter",impact:"High",ver:"",zen:"",remarks:""},
+  {id:23,sr:128,customer:"InnKey",module:"PMS",priority:"P2",commitment:"Internal",description:"Streamline self check-in flow (match tablet check-in)",jira:"IDK-24592",status:"Ticket Created",planned:"Current Sprint",impact:"Medium",ver:"7.4.10",zen:"",remarks:""},
+  {id:24,sr:281,customer:"InnKey",module:"FIN",priority:"P2",commitment:"Internal",description:"Opera Cloud FIN interface 1-way — Radisson deal requirement",jira:"",status:"To Define",planned:"Current Sprint",impact:"High",ver:"7.4.11",zen:"",remarks:"Waiting for OHIP purchase. Start ASAP."},
+  {id:25,sr:273,customer:"InnKey",module:"GEN",priority:"P2",commitment:"Internal",description:"Separation of QA and PROD environments in AWS",jira:"",status:"Not Planned",planned:"Next Quarter",impact:"High",ver:"",zen:"",remarks:""},
+  {id:26,sr:276,customer:"InnKey",module:"GEN",priority:"P3",commitment:"Internal",description:"Warm standby region for DR strategy",jira:"",status:"Not Planned",planned:"Next Quarter",impact:"Medium",ver:"",zen:"",remarks:"Supports SOC-2 Dec-26 deadline"},
+  {id:27,sr:290,customer:"InnKey",module:"FIN",priority:"P3",commitment:"Internal",description:"Show last year actual and budget in budget definition",jira:"",status:"Not Planned",planned:"Next Quarter",impact:"Medium",ver:"",zen:"",remarks:""},
+  {id:28,sr:291,customer:"InnKey",module:"FIN",priority:"P3",commitment:"Internal",description:"Forecast Definition with actuals comparison in all reports",jira:"",status:"Not Planned",planned:"Next Quarter",impact:"Medium",ver:"",zen:"",remarks:"Pair with Sr 290"},
+  {id:29,sr:117,customer:"InnKey",module:"PMS",priority:"P1",commitment:"Internal",description:"Rebuild IMS table logic for BOB — resolve data mismatches",jira:"IDK-24185",status:"Ticket Created",planned:"Current Sprint",impact:"High",ver:"7.4.11",zen:"",remarks:""},
+  {id:30,sr:79,customer:"InnKey",module:"MMS",priority:"P3",commitment:"Internal",description:"Re-design Physical Stock Adjustment with mobile tasks and approval workflow",jira:"IDK-23578",status:"Ticket Created",planned:"Current Quarter",impact:"High",ver:"",zen:"",remarks:"Prerequisite for F&B Costing stock changes"},
+  {id:31,sr:147,customer:"InnKey",module:"PMS",priority:"P3",commitment:"Internal",description:"Track reservation modifications/history for accurate pickup analysis",jira:"",status:"To Define",planned:"Current Quarter",impact:"Medium",ver:"",zen:"",remarks:""},
+  {id:32,sr:165,customer:"Kamat",module:"MMS",priority:"P3",commitment:"None",description:"Simplify PO creation — vendor mapping and pending PRs across stores",jira:"",status:"Not Planned",planned:"Next Quarter",impact:"High",ver:"",zen:"",remarks:""},
+  {id:33,sr:167,customer:"Kamat",module:"PMS",priority:"P3",commitment:"None",description:"Productivity and BOB reports — monthly/quarterly/weekly by segment",jira:"",status:"To Define",planned:"Current Quarter",impact:"High",ver:"",zen:"",remarks:""},
+  {id:34,sr:163,customer:"Kamat",module:"INT",priority:"P3",commitment:"Soft",description:"Sales CRM Interface — Sangam CRM",jira:"",status:"To Define",planned:"Next Quarter",impact:"Medium",ver:"",zen:"",remarks:"Also VITS Hotels"},
+  {id:35,sr:231,customer:"Treat",module:"MMS",priority:"P3",commitment:"None",description:"Centralized Vendor Master creation with approval and property mapping",jira:"",status:"To Define",planned:"Next Quarter",impact:"Medium",ver:"",zen:"",remarks:""},
+  {id:36,sr:289,customer:"InnKey",module:"FIN",priority:"P2",commitment:"Soft",description:"USALI account posting — charge-market segment and charge-room-type",jira:"",status:"Not Planned",planned:"Current Quarter",impact:"Medium",ver:"46203",zen:"",remarks:"Apara Hotel Advisors — Indonesia market entry deal"},
+];
+
+// ══ STATE ═════════════════════════════════════════════════════════════
+const STORAGE_KEY='innkey_pm_data';
+const PIN_KEY='innkey_pm_pin';
+const API_KEY_STORE='innkey_pm_apikey';
+let DATA=[], nextId=100, nextSr=400, editId=null, pfilt='all', aiMsgs=[], aiKey='';
+
+function loadData(){
+  try{
+    const saved=localStorage.getItem(STORAGE_KEY);
+    if(saved){DATA=JSON.parse(saved);nextId=Math.max(...DATA.map(d=>d.id))+1;nextSr=Math.max(...DATA.map(d=>d.sr))+1;}
+    else{DATA=JSON.parse(JSON.stringify(DEFAULT_DATA));saveData();}
+  }catch(e){DATA=JSON.parse(JSON.stringify(DEFAULT_DATA));}
+  aiKey=localStorage.getItem(API_KEY_STORE)||'';
+}
+
+function saveData(){
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(DATA));
+  const b=document.getElementById('save-badge');
+  if(b){b.style.display='inline';clearTimeout(b._t);b._t=setTimeout(()=>b.style.display='none',2000);}
+}
+
+// ══ PIN SYSTEM ════════════════════════════════════════════════════════
+let pinEntry='';
+function getPin(){return localStorage.getItem(PIN_KEY)||'1234';}
+function pinPress(d){
+  if(pinEntry.length>=4)return;
+  pinEntry+=d;
+  for(let i=0;i<4;i++)document.getElementById('d'+i).classList.toggle('filled',i<pinEntry.length);
+  if(pinEntry.length===4){
+    if(pinEntry===getPin()){
+      document.getElementById('lock-screen').classList.add('hidden');
+      document.getElementById('app').style.display='flex';
+      loadData();renderAll();
+    }else{
+      document.getElementById('pin-error').textContent='Wrong PIN. Try again.';
+      setTimeout(()=>{pinEntry='';for(let i=0;i<4;i++)document.getElementById('d'+i).classList.remove('filled');document.getElementById('pin-error').textContent='';},800);
+    }
+  }
+}
+function pinClear(){pinEntry=pinEntry.slice(0,-1);for(let i=0;i<4;i++)document.getElementById('d'+i).classList.toggle('filled',i<pinEntry.length);}
+function lockApp(){document.getElementById('app').style.display='none';document.getElementById('lock-screen').classList.remove('hidden');pinEntry='';for(let i=0;i<4;i++)document.getElementById('d'+i).classList.remove('filled');document.getElementById('pin-error').textContent='';}
+
+// ══ HELPERS ═══════════════════════════════════════════════════════════
+const PO={P1:1,P2:2,P3:3,P4:4,P5:5};
+const SO={'Released':1,'In Development':2,'Ticket Created':3,'To Define':4,'Not Planned':5};
+function pb(p){return`<span class="badge ${p.toLowerCase()}">${p}</span>`}
+function sb(s){const m={'Released':'s-rel','In Development':'s-dev','Ticket Created':'s-tkt','To Define':'s-def','Not Planned':'s-no'};return`<span class="badge ${m[s]||'s-no'}">${s}</span>`}
+function cb(c){const m={'Hard':'c-hard','Soft':'c-soft','None':'c-none','Internal':'c-int'};return`<span class="badge ${m[c]||'c-none'}">${c}</span>`}
+function mb(m){const cl={PMS:'m-pms',FIN:'m-fin',INT:'m-int',GEN:'m-gen',MMS:'m-mms',POS:'m-pos',ADD:'m-add'};return`<span class="${cl[m]||'m-gen'}">${m}</span>`}
+
+function filtered(){
+  const q=(document.getElementById('srch')||{}).value||'';
+  return DATA.filter(d=>{
+    if(pfilt!=='all'&&d.priority!==pfilt)return false;
+    if(q&&!JSON.stringify(d).toLowerCase().includes(q.toLowerCase()))return false;
+    return true;
+  }).sort((a,b)=>(PO[a.priority]||9)-(PO[b.priority]||9)||(SO[a.status]||9)-(SO[b.status]||9));
+}
+
+// ══ NAV ═══════════════════════════════════════════════════════════════
+function nav(v,el){
+  ['dash','list','kanban','risks','ai','settings'].forEach(id=>{const e=document.getElementById('v-'+id);if(e)e.classList.remove('on');});
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
+  const ve=document.getElementById('v-'+v);if(ve)ve.classList.add('on');
+  if(el)el.classList.add('on');
+  if(v==='ai')renderAI();
+  if(v==='settings')renderSettings();
+}
+function pf(p,el){document.querySelectorAll('.chips .chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');pfilt=p;renderAll();}
+
+// ══ RENDER ════════════════════════════════════════════════════════════
+function renderAll(){
+  updateStats();renderDash();renderList();renderKanban();renderRisks();
+}
+
+function updateStats(){
+  const s=id=>document.getElementById(id);
+  if(!s('st-tot'))return;
+  s('st-tot').textContent=DATA.length;
+  s('st-hard').textContent=DATA.filter(d=>d.commitment==='Hard').length;
+  s('st-jira').textContent=DATA.filter(d=>!d.jira).length;
+  s('st-rel').textContent=DATA.filter(d=>d.status==='Released').length;
+}
+
+function renderDash(){
+  const el=document.getElementById('v-dash');if(!el)return;
+  const p1=DATA.filter(d=>d.priority==='P1').length;
+  const hard=DATA.filter(d=>d.commitment==='Hard').length;
+  const nojira=DATA.filter(d=>!d.jira).length;
+  const custs={};DATA.forEach(d=>{if(!custs[d.customer])custs[d.customer]={t:0,p1:0,h:0};custs[d.customer].t++;if(d.priority==='P1')custs[d.customer].p1++;if(d.commitment==='Hard')custs[d.customer].h++;});
+  const stats={};DATA.forEach(d=>{stats[d.status]=(stats[d.status]||0)+1;});
+  const hardItems=DATA.filter(d=>d.commitment==='Hard').sort((a,b)=>(PO[a.priority]||9)-(PO[b.priority]||9));
+  el.innerHTML=`
+  <div class="metrics">
+    <div class="metric"><div class="metric-label">Total requirements</div><div class="metric-val">${DATA.length}</div><div class="metric-sub">across all customers</div></div>
+    <div class="metric"><div class="metric-label">P1 critical</div><div class="metric-val" style="color:var(--danger)">${p1}</div><div class="metric-sub">immediate action needed</div></div>
+    <div class="metric"><div class="metric-label">Hard commitments</div><div class="metric-val" style="color:var(--danger)">${hard}</div><div class="metric-sub">customer-facing promises</div></div>
+    <div class="metric"><div class="metric-label">No Jira ticket</div><div class="metric-val" style="color:var(--warn)">${nojira}</div><div class="metric-sub">missing traceability</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+    <div class="card"><div class="ch"><div class="ct">By customer</div></div>
+    <table><thead><tr><th>Customer</th><th>Total</th><th>P1</th><th>Hard</th></tr></thead><tbody>
+    ${Object.entries(custs).sort((a,b)=>b[1].t-a[1].t).map(([c,v])=>`<tr><td><strong>${c}</strong></td><td>${v.t}</td><td style="color:${v.p1?'var(--danger)':'var(--text3)'}">${v.p1||'—'}</td><td style="color:${v.h?'var(--danger)':'var(--text3)'}">${v.h||'—'}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="card"><div class="ch"><div class="ct">By status</div></div>
+    <table><thead><tr><th>Status</th><th>Count</th><th>%</th></tr></thead><tbody>
+    ${Object.entries(stats).sort((a,b)=>(SO[a[0]]||9)-(SO[b[0]]||9)).map(([s,c])=>`<tr><td>${sb(s)}</td><td>${c}</td><td style="color:var(--text3)">${Math.round(c/DATA.length*100)}%</td></tr>`).join('')}
+    </tbody></table></div>
+  </div>
+  <div class="card"><div class="ch"><div class="ct">Hard commitments</div><div class="cc">${hardItems.length} items</div></div>
+  <table><thead><tr><th>Sr</th><th>Customer</th><th>Description</th><th>Priority</th><th>Status</th><th>Planned</th></tr></thead><tbody>
+  ${hardItems.map(d=>`<tr><td>${d.sr}</td><td><strong>${d.customer}</strong></td><td class="td-desc">${d.description}</td><td>${pb(d.priority)}</td><td>${sb(d.status)}</td><td style="font-size:11px;white-space:nowrap">${d.planned}</td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+
+function renderList(){
+  const el=document.getElementById('v-list');if(!el)return;
+  const items=filtered();
+  el.innerHTML=`
+  <div class="toolbar-row">
+    <select onchange="filterCust(this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text);cursor:pointer">
+      <option value="all">All customers</option>
+      ${[...new Set(DATA.map(d=>d.customer))].sort().map(c=>`<option>${c}</option>`).join('')}
+    </select>
+    <select onchange="filterMod(this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text);cursor:pointer">
+      <option value="all">All modules</option>
+      ${[...new Set(DATA.map(d=>d.module))].sort().map(m=>`<option>${m}</option>`).join('')}
+    </select>
+    <button class="btn btn-sm" onclick="exportCSV()">↓ Export CSV</button>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct">All requirements</div><div class="cc">${items.length} of ${DATA.length} shown</div></div>
+    <table><thead><tr><th>Sr</th><th>Customer</th><th>Module</th><th>Description</th><th>Priority</th><th>Commitment</th><th>Status</th><th>Planned</th><th>Jira</th><th>Actions</th></tr></thead><tbody>
+    ${items.map(d=>`<tr>
+      <td style="color:var(--text3)">${d.sr}</td>
+      <td style="white-space:nowrap;font-weight:600">${d.customer}</td>
+      <td>${mb(d.module)}</td>
+      <td class="td-desc">${d.description}${d.remarks?`<div style="font-size:10px;color:var(--text3);margin-top:2px">${d.remarks}</div>`:''}</td>
+      <td>${pb(d.priority)}</td>
+      <td>${cb(d.commitment)}</td>
+      <td>${sb(d.status)}</td>
+      <td style="font-size:11px;color:var(--text2);white-space:nowrap">${d.planned}</td>
+      <td style="font-size:11px">${d.jira?`<span style="color:var(--accent)">${d.jira}</span>`:`<span style="color:var(--danger)">None</span>`}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-sm" onclick="editItem(${d.id})">Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="delItem(${d.id})" style="margin-left:4px">✕</button>
+      </td>
+    </tr>`).join('')}
+    </tbody></table>
+  </div>`;
+}
+
+let custFilt='all',modFilt='all';
+function filterCust(v){custFilt=v;renderList();}
+function filterMod(v){modFilt=v;renderList();}
+
+function renderKanban(){
+  const el=document.getElementById('v-kanban');if(!el)return;
+  const cols=['To Define','Ticket Created','In Development','Released'];
+  const items=filtered();
+  el.innerHTML=`<div class="kanban">${cols.map(col=>{
+    const ci=items.filter(d=>d.status===col);
+    return`<div class="kcol">
+      <div class="kh">${col}<span class="kn">${ci.length}</span></div>
+      ${ci.map(d=>`<div class="kcard" onclick="editItem(${d.id})">
+        <div class="kt">${d.description.length>85?d.description.slice(0,85)+'…':d.description}</div>
+        <div class="km">${pb(d.priority)} · ${d.customer} · ${mb(d.module)}${d.commitment==='Hard'?` · <span style="color:var(--danger);font-weight:600;font-size:10px">HARD</span>`:''}</div>
+      </div>`).join('')}
+      ${ci.length===0?`<div style="text-align:center;padding:20px;color:var(--text3);font-size:11px">No items</div>`:''}
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderRisks(){
+  const el=document.getElementById('v-risks');if(!el)return;
+  const hardNoJira=DATA.filter(d=>d.commitment==='Hard'&&!d.jira);
+  el.innerHTML=`
+  <div class="slabel">Critical — act now</div>
+  <div class="flag f-red"><div class="fd"></div><div class="ft"><strong>Finance squad at critical load — 3 P2 items "To Define" with no Jira</strong><br>Opera Cloud FIN interface, USALI posting, Bank API for outward payments. If these spill into Q3 they block all P3 Finance work. Force scoping decisions this week.</div></div>
+  <div class="flag f-red"><div class="fd"></div><div class="ft"><strong>Marriott PMS cluster has a hard sequencing dependency</strong><br>Block & Party → Charge & Window Routing → Sharer/Pax must ship in that exact order. Starting any item out of sequence risks a full rework.</div></div>
+  <div class="slabel">High — flag before planning</div>
+  <div class="flag f-amb"><div class="fd"></div><div class="ft"><strong>SAML SSO (Fern P2 Hard) — Oct-26 deadline, no Jira ticket, no owner assigned</strong><br>9-month hard deadline from Dec-2025. Must be in dev by Q3 at latest. Currently "Not Planned" with no ticket. Most urgent untracked commitment.</div></div>
+  <div class="flag f-amb"><div class="fd"></div><div class="ft"><strong>F&B Costing cluster spans MMS and POS — needs coordinated release</strong><br>10 items queued across different quarters. Recipe Definition master must ship first or the costing engine has no data. Treat the entire cluster as one release.</div></div>
+  ${hardNoJira.length?`<div class="flag f-amb"><div class="fd"></div><div class="ft"><strong>${hardNoJira.length} Hard commitment${hardNoJira.length>1?'s':''} have no Jira ticket</strong><br>${hardNoJira.map(d=>d.description.slice(0,55)+'…').join('; ')}</div></div>`:''}
+  <div class="slabel">Watch</div>
+  <div class="flag f-blu"><div class="fd"></div><div class="ft"><strong>Private API routing (Infra P3) should precede new interface builds</strong><br>New interfaces built before private Lambda/EventBridge routing is in place will need retrofitting later.</div></div>
+  <div class="flag f-blu"><div class="fd"></div><div class="ft"><strong>Aadhar auth (P2) depends on self check-in flow being stable first</strong><br>Do not start Aadhar integration until IDK-24592 (self check-in streamline) is Released.</div></div>`;
+}
+
+function renderAI(){
+  const el=document.getElementById('v-ai');if(!el)return;
+  el.innerHTML=`
+  <div class="ai-panel">
+    <div class="ai-hd"><div class="ai-dot"></div><div class="ai-ht">AI assistant — powered by Claude</div></div>
+    <div class="ai-row">
+      <textarea id="ai-in" placeholder="Ask anything — e.g. Which P3 items should I pull into Q3?" rows="2" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAI();}"></textarea>
+      <button class="btn btn-primary" onclick="sendAI()" style="align-self:flex-end">Ask ✦</button>
+    </div>
+    <div class="ai-key-row">
+      <span class="ai-key-label">Anthropic API key:</span>
+      <input type="password" id="ai-key-inp" value="${aiKey}" placeholder="sk-ant-..." onchange="saveApiKey(this.value)">
+      <button class="btn btn-sm" onclick="saveApiKey(document.getElementById('ai-key-inp').value)">Save</button>
+    </div>
+    <div class="ai-chips">
+      <div class="ai-chip" onclick="qa('Summarize all Hard commitments and flag which ones are at risk based on current status')">Risk summary</div>
+      <div class="ai-chip" onclick="qa('Write acceptance criteria in Given/When/Then format for SAML SSO Integration with Azure AD for Fern Hotels with Oct-26 deadline')">Acceptance criteria</div>
+      <div class="ai-chip" onclick="qa('Which P3 items should the Finance squad pick up in Q3, given the current P1/P2 sprint load?')">Q3 Finance plan</div>
+      <div class="ai-chip" onclick="qa('List all items with no Jira ticket planned for Current Sprint or Current Quarter and write a one-line action for each')">Missing Jira tickets</div>
+      <div class="ai-chip" onclick="qa('Draft a professional status update email to Fern Hotels about the SAML SSO commitment and what we need from them')">Customer email</div>
+      <div class="ai-chip" onclick="qa('Which requirements have the most cross-customer impact across Accord, Fern, Kamat and Raintree? Top 5.')">Cross-customer impact</div>
+    </div>
+    <div class="ai-msgs" id="ai-msgs">${aiMsgs.map(renderMsg).join('')}</div>
+  </div>`;
+  const m=document.getElementById('ai-msgs');if(m)m.scrollTop=m.scrollHeight;
+}
+
+function saveApiKey(k){aiKey=k.trim();localStorage.setItem(API_KEY_STORE,aiKey);}
+function renderMsg(m){return m.role==='user'?`<div class="msg-u">${m.content}</div>`:`<div class="msg-a">${m.content}</div>`;}
+
+async function sendAI(){
+  const inp=document.getElementById('ai-in');
+  const q=(inp||{}).value||'';
+  if(!q.trim())return;
+  if(inp)inp.value='';
+  aiMsgs.push({role:'user',content:q.trim()});
+  const mc=document.getElementById('ai-msgs');
+  if(mc){mc.innerHTML=aiMsgs.map(renderMsg).join('')+`<div class="typing-ind" id="typing"><span></span><span></span><span></span></div>`;mc.scrollTop=mc.scrollHeight;}
+
+  const ctx=`You are an expert PM assistant for InnKey hotel management software. You have access to ${DATA.length} requirements:\n\n`+
+    DATA.map(d=>`[Sr${d.sr}] ${d.customer}|${d.module}|${d.priority}|${d.commitment}|${d.status}|${d.planned}|${d.description}${d.jira?'|Jira:'+d.jira:''}${d.remarks?'|Note:'+d.remarks:''}`).join('\n')+
+    `\n\nBe concise, professional, specific. Use actual data. Q: ${q}`;
+
+  if(!aiKey){
+    aiMsgs.push({role:'assistant',content:'⚠️ No API key set.\n\nTo use the AI assistant:\n1. Get a free API key from console.anthropic.com\n2. Paste it in the "Anthropic API key" field above and click Save\n3. Your key is stored locally on your device only — never shared\n\nAlternatively, just ask me (Claude) directly in the chat — I can see all your requirements and answer instantly!'});
+    renderAI();return;
+  }
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':aiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:ctx}]})
+    });
+    const data=await res.json();
+    if(data.error){aiMsgs.push({role:'assistant',content:'Error: '+data.error.message});}
+    else{aiMsgs.push({role:'assistant',content:data.content?.[0]?.text||'No response.'});}
+  }catch(e){
+    aiMsgs.push({role:'assistant',content:'Network error. Check your API key and internet connection.'});
+  }
+  renderAI();
+}
+function qa(q){const i=document.getElementById('ai-in');if(i){i.value=q;sendAI();}}
+
+function renderSettings(){
+  const el=document.getElementById('v-settings');if(!el)return;
+  el.innerHTML=`
+  <div style="max-width:520px">
+    <div class="settings-section">
+      <div class="settings-title">Security — PIN lock</div>
+      <div class="setting-row">
+        <div><div class="setting-label">Change PIN</div><div class="setting-sub">Currently set to a 4-digit PIN. Anyone you share the link with will need this PIN.</div></div>
+      </div>
+      <div class="fg2" style="margin-top:12px">
+        <div class="fg"><label>New PIN (4 digits)</label><input type="password" id="new-pin" maxlength="4" placeholder="e.g. 5678"></div>
+        <div class="fg"><label>Confirm PIN</label><input type="password" id="confirm-pin" maxlength="4" placeholder="Repeat PIN"></div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="changePin()" style="margin-top:4px">Update PIN</button>
+      <div id="pin-msg" style="font-size:12px;margin-top:8px"></div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-title">Data management</div>
+      <div class="setting-row">
+        <div><div class="setting-label">Export all requirements</div><div class="setting-sub">Download a CSV backup of all ${DATA.length} requirements</div></div>
+        <button class="btn btn-sm" onclick="exportCSV()">↓ Export CSV</button>
+      </div>
+      <div class="setting-row">
+        <div><div class="setting-label">Import from CSV</div><div class="setting-sub">Merge or replace data from a CSV file</div></div>
+        <button class="btn btn-sm" onclick="document.getElementById('csv-upload').click()">↑ Import CSV</button>
+      </div>
+      <input type="file" id="csv-upload" accept=".csv" style="display:none" onchange="importCSV(this)">
+      <div class="setting-row">
+        <div><div class="setting-label">Reset to default data</div><div class="setting-sub">Restore the original 36 sample requirements. This cannot be undone.</div></div>
+        <button class="btn btn-sm btn-danger" onclick="resetData()">Reset</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-title">About</div>
+      <div class="setting-row"><div><div class="setting-label">Storage</div><div class="setting-sub">Data is saved in your browser's localStorage on this device. It persists across sessions but is device-specific.</div></div></div>
+      <div class="setting-row"><div><div class="setting-label">Sharing</div><div class="setting-sub">Share the URL of this page. Others will need the PIN to access. For multi-device sync, export CSV and re-import on another device.</div></div></div>
+      <div class="setting-row"><div><div class="setting-label">Version</div><div class="setting-sub">InnKey PM v1.0 · Built for InnKey hotel management requirements tracking</div></div></div>
+    </div>
+  </div>`;
+}
+
+function changePin(){
+  const np=document.getElementById('new-pin').value;
+  const cp=document.getElementById('confirm-pin').value;
+  const msg=document.getElementById('pin-msg');
+  if(!/^\d{4}$/.test(np)){msg.style.color='var(--danger)';msg.textContent='PIN must be exactly 4 digits.';return;}
+  if(np!==cp){msg.style.color='var(--danger)';msg.textContent='PINs do not match.';return;}
+  localStorage.setItem(PIN_KEY,np);
+  msg.style.color='var(--success)';msg.textContent='PIN updated successfully!';
+  setTimeout(()=>msg.textContent='',3000);
+}
+
+function exportCSV(){
+  const headers=['Sr','Customer','Module','Priority','Commitment','Status','Planned','Jira','Impact','Fix Version','Zendesk','Description','Remarks'];
+  const rows=DATA.map(d=>[d.sr,d.customer,d.module,d.priority,d.commitment,d.status,d.planned,d.jira||'',d.impact||'',d.ver||'',d.zen||'',`"${(d.description||'').replace(/"/g,'""')}"`,`"${(d.remarks||'').replace(/"/g,'""')}"`]);
+  const csv=[headers.join(','),...rows.map(r=>r.join(','))].join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='innkey_requirements_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+
+function importCSV(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const lines=e.target.result.split('\n').filter(l=>l.trim());
+      const headers=lines[0].split(',').map(h=>h.trim().toLowerCase());
+      const imported=lines.slice(1).map((line,i)=>{
+        const vals=line.match(/(".*?"|[^,]+)/g)||[];
+        const clean=v=>(v||'').replace(/^"|"$/g,'').replace(/""/g,'"').trim();
+        return{id:nextId++,sr:nextSr++,customer:clean(vals[1]),module:clean(vals[2])||'GEN',priority:clean(vals[3])||'P3',commitment:clean(vals[4])||'None',status:clean(vals[5])||'Not Planned',planned:clean(vals[6])||'Not Planned',jira:clean(vals[7]),impact:clean(vals[8])||'Medium',ver:clean(vals[9]),zen:clean(vals[10]),description:clean(vals[11]),remarks:clean(vals[12])};
+      }).filter(d=>d.customer&&d.description);
+      if(confirm(`Import ${imported.length} requirements? This will be added to existing ${DATA.length} items.`)){DATA=[...DATA,...imported];saveData();renderAll();alert(`Imported ${imported.length} requirements.`);}
+    }catch(e){alert('Error parsing CSV. Make sure it was exported from this tool.');}
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+
+function resetData(){if(!confirm('Reset to default data? All your changes will be lost.'))return;DATA=JSON.parse(JSON.stringify(DEFAULT_DATA));saveData();renderAll();alert('Data reset.');}
+
+// ══ MODAL ═════════════════════════════════════════════════════════════
+function openAdd(){editId=null;document.getElementById('modal-title').textContent='Add requirement';['f-desc','f-cust','f-jira','f-ver','f-zen','f-rem'].forEach(f=>{const e=document.getElementById(f);if(e)e.value='';});['f-mod','f-pri','f-com','f-sta','f-pln','f-imp'].forEach(f=>{const e=document.getElementById(f);if(e)e.selectedIndex=0;});const ep=document.getElementById('f-pri');if(ep)ep.value='P3';document.getElementById('modal').classList.add('show');}
+
+function editItem(id){
+  const d=DATA.find(x=>x.id===id);if(!d)return;
+  editId=id;document.getElementById('modal-title').textContent='Edit requirement';
+  const s=(f,v)=>{const e=document.getElementById(f);if(e)e.value=v||'';};
+  s('f-desc',d.description);s('f-cust',d.customer);s('f-jira',d.jira);s('f-ver',d.ver);s('f-zen',d.zen);s('f-rem',d.remarks);
+  s('f-mod',d.module);s('f-pri',d.priority);s('f-com',d.commitment);s('f-sta',d.status);s('f-pln',d.planned);s('f-imp',d.impact);
+  document.getElementById('modal').classList.add('show');
+}
+
+function closeModal(){document.getElementById('modal').classList.remove('show');}
+
+function saveItem(){
+  const g=id=>(document.getElementById(id)||{}).value||'';
+  const desc=g('f-desc').trim(),cust=g('f-cust').trim();
+  if(!desc||!cust){alert('Description and Customer are required.');return;}
+  const item={id:editId||nextId++,sr:editId?DATA.find(d=>d.id===editId).sr:nextSr++,description:desc,customer:cust,module:g('f-mod'),priority:g('f-pri'),commitment:g('f-com'),status:g('f-sta'),planned:g('f-pln'),jira:g('f-jira').trim(),impact:g('f-imp'),ver:g('f-ver').trim(),zen:g('f-zen').trim(),remarks:g('f-rem').trim()};
+  if(editId){const i=DATA.findIndex(d=>d.id===editId);if(i>-1)DATA[i]=item;}else DATA.push(item);
+  saveData();closeModal();renderAll();
+}
+
+function delItem(id){if(!confirm('Delete this requirement?'))return;DATA=DATA.filter(d=>d.id!==id);saveData();renderAll();}
+
+document.addEventListener('click',e=>{const ov=document.getElementById('modal');if(e.target===ov)closeModal();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+</script>
+</body>
+</html>
